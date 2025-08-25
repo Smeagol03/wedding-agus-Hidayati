@@ -58,41 +58,150 @@ document.addEventListener("DOMContentLoaded", function () {
   const audio = document.getElementById("wedding-music");
   const heroSection = document.getElementById("hero");
 
-  window.scrollTo(0, 0);
-
-  function disableScroll(event) {
-    event.preventDefault();
-  }
-
-  window.addEventListener("scroll", disableScroll);
-  window.addEventListener("wheel", disableScroll, { passive: false });
-  window.addEventListener("touchmove", disableScroll, { passive: false });
-  window.addEventListener("keydown", function (event) {
-    if (
-      ["ArrowUp", "ArrowDown", "Space", "PageUp", "PageDown"].includes(
-        event.key
-      )
-    ) {
-      event.preventDefault();
-    }
+  // Set initial scroll position
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "instant",
   });
 
+  // Store last scroll position
+  let lastScrollTop = 0;
+  let lastScrollLeft = 0;
+
+  // Comprehensive scroll disable function
+  function disableScroll(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Force maintain scroll position
+    window.scrollTo({
+      top: lastScrollTop,
+      left: lastScrollLeft,
+      behavior: "instant",
+    });
+  }
+
+  // Handle different types of scroll events
+  const scrollEvents = [
+    { event: "scroll", handler: disableScroll, options: { passive: false } },
+    { event: "wheel", handler: disableScroll, options: { passive: false } },
+    { event: "touchmove", handler: disableScroll, options: { passive: false } },
+    {
+      event: "mousewheel",
+      handler: disableScroll,
+      options: { passive: false },
+    }, // For older browsers
+    {
+      event: "DOMMouseScroll",
+      handler: disableScroll,
+      options: { passive: false },
+    }, // For Firefox
+  ];
+
+  // Handle keyboard scrolling
+  function handleKeyboard(event) {
+    const scrollKeys = [
+      "ArrowUp",
+      "ArrowDown",
+      "Space",
+      "PageUp",
+      "PageDown",
+      "Home",
+      "End",
+    ];
+
+    if (scrollKeys.includes(event.key)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  // Apply CSS to prevent scrolling
+  function applyScrollLock() {
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.height = "100%";
+  }
+
+  // Remove CSS scroll lock
+  function removeScrollLock() {
+    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.width = "";
+    document.body.style.height = "";
+  }
+
+  // Initialize scroll lock
+  applyScrollLock();
+
+  // Add all scroll event listeners
+  scrollEvents.forEach(({ event, handler, options }) => {
+    window.addEventListener(event, handler, options);
+  });
+
+  // Add keyboard event listener
+  window.addEventListener("keydown", handleKeyboard, { passive: false });
+
+  // Handle play button click
   playButton.addEventListener("click", function (event) {
     event.preventDefault();
+    event.stopPropagation();
 
-    window.removeEventListener("scroll", disableScroll);
-    window.removeEventListener("wheel", disableScroll);
-    window.removeEventListener("touchmove", disableScroll);
+    // Remove all scroll event listeners
+    scrollEvents.forEach(({ event, handler }) => {
+      window.removeEventListener(event, handler);
+    });
 
+    // Remove keyboard event listener
+    window.removeEventListener("keydown", handleKeyboard);
+
+    // Remove CSS scroll lock
+    removeScrollLock();
+
+    // Play audio
     if (audio.paused) {
       audio
         .play()
         .catch((error) => console.error("Gagal memutar musik:", error));
     }
 
+    // Scroll to hero section
     if (heroSection) {
-      heroSection.scrollIntoView({ behavior: "smooth" });
+      heroSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
     }
+  });
+
+  // Handle touchstart to prevent default scrolling on mobile
+  window.addEventListener(
+    "touchstart",
+    function (event) {
+      lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      lastScrollLeft =
+        window.pageXOffset || document.documentElement.scrollLeft;
+    },
+    { passive: true }
+  );
+
+  // Prevent pinch zoom scrolling
+  document.addEventListener("gesturestart", function (e) {
+    e.preventDefault();
+  });
+
+  // Cleanup on page unload
+  window.addEventListener("unload", function () {
+    removeScrollLock();
+    scrollEvents.forEach(({ event, handler }) => {
+      window.removeEventListener(event, handler);
+    });
+    window.removeEventListener("keydown", handleKeyboard);
   });
 });
 
